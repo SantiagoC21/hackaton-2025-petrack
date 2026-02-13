@@ -5,16 +5,65 @@ import { DonorDashboard } from "@/components/petrack/donor-dashboard"
 import { ShelterDashboard } from "@/components/petrack/shelter-dashboard"
 import { VotingCenter } from "@/components/petrack/voting-center"
 import { ResultsScreen } from "@/components/petrack/results-screen"
+import { RoleSelector } from "@/components/auth/_components/role-selection"
+import { AuthScreen } from "@/components/auth/_components/auth-screen"
+
+type AppState = "role-selection" | "auth" | "dashboard"
 
 export default function PetrackMockup() {
-  const [activeScreen, setActiveScreen] = useState<number>(1)
+  const [appState, setAppState] = useState<AppState>("role-selection")
+  const [selectedRole, setSelectedRole] = useState<"donor" | "shelter" | null>(null)
+  const [activeScreen, setActiveScreen] = useState<string>("")
 
-  const screens = [
-    { id: 1, name: "Donante", component: <DonorDashboard /> },
-    { id: 2, name: "Refugio", component: <ShelterDashboard /> },
-    { id: 3, name: "Votación", component: <VotingCenter /> },
-    { id: 4, name: "Resultados", component: <ResultsScreen /> },
+  const handleSelectRole = (role: "donor" | "shelter") => {
+    setSelectedRole(role)
+    setAppState("auth")
+  }
+
+  const handleBackToRoleSelection = () => {
+    setSelectedRole(null)
+    setAppState("role-selection")
+  }
+
+  const handleAuthenticated = () => {
+    setActiveScreen(selectedRole === "donor" ? "donor" : "shelter")
+    setAppState("dashboard")
+  }
+
+  const handleLogout = () => {
+    setSelectedRole(null)
+    setAppState("role-selection")
+  }
+
+  // Show role selection screen
+  if (appState === "role-selection") {
+    return <RoleSelector onSelect={handleSelectRole} />
+  }
+
+  // Show auth screen
+  if (appState === "auth" && selectedRole) {
+    return (
+      <AuthScreen
+        role={selectedRole}
+        onBack={handleBackToRoleSelection}
+        onAuthenticated={handleAuthenticated}
+      />
+    )
+  }
+
+  // Screens filtered by role
+  const donorScreens = [
+    { id: "donor", name: "Mi Panel", component: <DonorDashboard /> },
+    { id: "voting", name: "Votación", component: <VotingCenter /> },
+    { id: "results", name: "Resultados", component: <ResultsScreen /> },
   ]
+
+  const shelterScreens = [
+    { id: "shelter", name: "Mi Refugio", component: <ShelterDashboard /> },
+    { id: "results", name: "Resultados", component: <ResultsScreen /> },
+  ]
+
+  const screens = selectedRole === "donor" ? donorScreens : shelterScreens
 
   return (
     <div className="min-h-screen bg-background">
@@ -42,7 +91,12 @@ export default function PetrackMockup() {
             ))}
           </nav>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">Mockup UI</span>
+            <button
+              onClick={handleLogout}
+              className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Cerrar Sesión
+            </button>
           </div>
         </div>
       </header>
