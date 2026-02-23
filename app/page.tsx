@@ -6,7 +6,8 @@ import { ShelterDashboard } from "@/components/petrack/shelter-dashboard"
 import { VotingCenter } from "@/components/petrack/voting-center"
 import { ResultsScreen } from "@/components/petrack/results-screen"
 import { RoleSelector } from "@/components/auth/_components/role-selection"
-import { AuthScreen } from "@/components/auth/_components/auth-screen"
+import { DonorAuthScreen } from "@/components/auth/_components/donor-auth-screen"
+import { ShelterAuthScreen } from "@/components/auth/_components/shelter-auth-screen"
 
 type AppState = "role-selection" | "auth" | "dashboard"
 
@@ -41,10 +42,18 @@ export default function PetrackMockup() {
   }
 
   // Show auth screen
-  if (appState === "auth" && selectedRole) {
+  if (appState === "auth" && selectedRole === "donor") {
     return (
-      <AuthScreen
-        role={selectedRole}
+      <DonorAuthScreen
+        onBack={handleBackToRoleSelection}
+        onAuthenticated={handleAuthenticated}
+      />
+    )
+  }
+
+  if (appState === "auth" && selectedRole === "shelter") {
+    return (
+      <ShelterAuthScreen
         onBack={handleBackToRoleSelection}
         onAuthenticated={handleAuthenticated}
       />
