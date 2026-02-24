@@ -30,9 +30,18 @@ export default function useShelterRegisterForm({
         register,
         handleSubmit,
         reset,
+        control,
         formState: { errors }
     } = useForm<z.infer<typeof RegisterShelterDetailSchema>>({
         resolver: zodResolver(RegisterShelterDetailSchema),
+        defaultValues: {
+            name: "",
+            email: "",
+            password: "",
+            confirmPassword: "",
+            address: "",
+            phone_number: "",
+        },
     });
 
     function getPasswordStrength(password: string): { label: string; score: number } {
@@ -68,10 +77,10 @@ export default function useShelterRegisterForm({
 
             const dataToRegister = {
                 name: data.name.trim(),
-                address: data.address.trim(),
+                ubicacion: data.address.trim(),
                 email: data.email.trim(),
                 password: data.password.trim(),
-                phone_number: data.phone_number.trim(),
+                phone_number: data.phone_number?.trim() || "",
             };
 
             const fetchRegisterUser = await registerReceiverUser(dataToRegister);
@@ -105,6 +114,7 @@ export default function useShelterRegisterForm({
         passwordStrength,
         handleRegisterForSubmit,
         register,
+        control,
         errors,
         handlePasswordChange
     }

@@ -45,6 +45,14 @@
   --warning-foreground: oklch(0.25 0.05 75);
   --teal: oklch(0.65 0.12 190);
   --teal-foreground: oklch(0.99 0 0);
+
+  /* Phone Input tokens */
+/* Tamaño de la bandera */
+  --PhoneInputCountryFlag-height: 20px;
+  /* Espacio entre la bandera y el input */
+  --PhoneInputCountrySelect-marginRight: 10px;
+  /* Color del borde cuando hay foco (si usas el estilo por defecto) */
+  --PhoneInputInput-color--focus: #3b82f6;
 }
 
 .dark {
@@ -136,6 +144,112 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+.PhoneInputInput {
+  flex: 1;
+  min-width: 0;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--foreground);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.PhoneInput--focus .PhoneInputInput {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 2px oklch(from var(--ring) l c h / 0.2);
+}
+
+.PhoneInputInput::placeholder {
+  color: var(--muted-foreground);
+}
+
+.PhoneInputInput:focus {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 2px oklch(from var(--ring) l c h / 0.2);
+}
+
+.PhoneInputCountry {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: var(--muted);
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius) 0 0 var(--radius);
+  border: 1px solid var(--border);
+  border-right: none;
+  color: var(--foreground);
+  cursor: pointer;
+}
+
+.PhoneInputCountrySelect {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  z-index: 1;
+  border: none;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.PhoneInputCountrySelectArrow {
+  display: block;
+  width: 0.35em;
+  height: 0.35em;
+  margin-left: 0.35em;
+  border-style: solid;
+  border-color: var(--muted-foreground);
+  border-top-width: 0;
+  border-bottom-width: 1px;
+  border-left-width: 0;
+  border-right-width: 1px;
+  transform: rotate(45deg);
+}
+
+.PhoneInputCountryIcon {
+  width: 1.5em;
+  height: 1em;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.PhoneInputCountryIcon--border {
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.PhoneInputCountryIconImg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.PhoneInput {
+  display: flex;
+  align-items: stretch;
+}
+
+.PhoneInput--focus .PhoneInputCountry {
+  border-color: var(--ring);
+}
+
+.dark .PhoneInputInput {
+  background: var(--background);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+.dark .PhoneInputCountry {
+  background: var(--muted);
+  border-color: var(--border);
 }
 
 .phone-input-custom {

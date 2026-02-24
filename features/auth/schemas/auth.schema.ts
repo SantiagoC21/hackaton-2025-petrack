@@ -21,9 +21,9 @@ export const RegisterShelterSchema = z.object({
         required_error: "Name is required",
         invalid_type_error: "Name must be a string",
     }).min(3, "Name must be at least 3 characters long"),
-    address: z.string({
-        required_error: "Address is required",
-        invalid_type_error: "Address must be a string",
+    ubicacion: z.string({
+        required_error: "ubicacion is required",
+        invalid_type_error: "ubicacion must be a string",
     }),
     email: z.string({
         required_error: "Email is required"

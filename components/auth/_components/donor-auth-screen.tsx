@@ -1,15 +1,16 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState } from "react"
 import { Controller } from "react-hook-form"
 import Image from "next/image"
-import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Wallet, Heart, ShieldCheck, X } from "lucide-react"
+import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Wallet, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import useDonorRegisterForm from "@/features/auth/hooks/useDonorRegisterForm"
 import PhoneInput from "react-phone-number-input"
 import 'react-phone-number-input/style.css';
+import { VerificationCodeModal } from "@/components/auth/_modals/verification-code-modal"
 
 type AuthMode = "login" | "register"
 
@@ -29,34 +30,6 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
   const [loginError, setLoginError] = useState("")
   const [showVerificationCodeModal, setShowVerificationCodeModal] = useState(false)
   const [verificationEmail, setVerificationEmail] = useState("")
-  const [verificationCode, setVerificationCode] = useState(["" ,"", "", "", "", ""])
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
-
-  const handleCodeChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return
-    const newCode = [...verificationCode]
-    newCode[index] = value.slice(-1)
-    setVerificationCode(newCode)
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus()
-    }
-  }
-
-  const handleCodeKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace" && !verificationCode[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus()
-    }
-  }
-
-  const handleCodePaste = (e: React.ClipboardEvent) => {
-    e.preventDefault()
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6)
-    const newCode = [...verificationCode]
-    pasted.split("").forEach((char, i) => { newCode[i] = char })
-    setVerificationCode(newCode)
-    const nextEmpty = newCode.findIndex((v) => !v)
-    inputRefs.current[nextEmpty === -1 ? 5 : nextEmpty]?.focus()
-  }
 
   const {
     register,
@@ -300,11 +273,10 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
                   render={({ field }) => (
                     <PhoneInput
                       international
-                      defaultCountry="PE"
+                      defaultCountry="MX"
                       placeholder="Ingresa tu numero"
                       value={field.value}
                       onChange={field.onChange}
-                      className="phone-input-custom"
                     />
                   )}
                 />
@@ -316,7 +288,7 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
               {/* Contrasena */}
               <div className="flex flex-col gap-2">
                 <Label htmlFor="password" className="text-sm font-medium text-foreground">
-                  Contrasena
+                  Contraseña
                 </Label>
                 <div className="relative">
                   <Lock className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -339,6 +311,21 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
                 </div>
                 {errors.password && (
                   <p className="text-xs text-destructive">{errors.password.message}</p>
+                )}
+                {passwordStrength.label && (
+                  <div className="flex items-center gap-2">
+                    <div className="h-1 flex-1 rounded-full bg-muted">
+                      <div 
+                        className={`h-1 rounded-full transition-all ${
+                          passwordStrength.score <= 2 ? "bg-destructive w-1/4" :
+                          passwordStrength.score <= 4 ? "bg-warning w-1/2" :
+                          passwordStrength.score <= 6 ? "bg-primary w-3/4" :
+                          "bg-success w-full"
+                        }`}
+                      />
+                    </div>
+                    <span className="text-xs text-muted-foreground">{passwordStrength.label}</span>
+                  </div>
                 )}
               </div>
 
@@ -407,69 +394,13 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
         </div>
 
         {/* Verification Code Modal */}
-        {showVerificationCodeModal && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm rounded-2xl">
-            <div className="relative mx-4 w-full max-w-sm rounded-2xl border border-border bg-card p-8 shadow-xl">
-              <button
-                onClick={() => setShowVerificationCodeModal(false)}
-                className="absolute top-4 right-4 rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-
-              <div className="flex flex-col items-center gap-5 text-center">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-                  <ShieldCheck className="h-7 w-7 text-primary" />
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <h2 className="text-xl font-bold text-foreground">Verifica tu correo</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Enviamos un codigo de 6 digitos a
-                  </p>
-                  <p className="text-sm font-semibold text-primary break-all">{verificationEmail}</p>
-                </div>
-
-                <div className="flex gap-2" onPaste={handleCodePaste}>
-                  {verificationCode.map((digit, i) => (
-                    <input
-                      key={i}
-                      ref={(el) => { inputRefs.current[i] = el }}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => handleCodeChange(i, e.target.value)}
-                      onKeyDown={(e) => handleCodeKeyDown(i, e)}
-                      className="h-12 w-10 rounded-xl border border-border bg-muted/50 text-center text-lg font-bold text-foreground outline-none transition-all focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/20"
-                    />
-                  ))}
-                </div>
-
-                <Button
-                  className="w-full py-5 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
-                  onClick={() => {
-                    onAuthenticated()
-                  }}
-                  disabled={verificationCode.some((d) => !d)}
-                >
-                  Verificar cuenta
-                </Button>
-
-                <p className="text-xs text-muted-foreground">
-                  No recibiste el correo?{" "}
-                  <button
-                    type="button"
-                    className="font-semibold text-primary transition-colors hover:text-primary/80"
-                    onClick={() => setVerificationCode(["", "", "", "", "", ""])}
-                  >
-                    Reenviar codigo
-                  </button>
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
+        <VerificationCodeModal
+          isOpen={showVerificationCodeModal}
+          onClose={() => setShowVerificationCodeModal(false)}
+          onVerify={onAuthenticated}
+          email={verificationEmail}
+          accentColor="primary"
+        />
 
         {/* Right Side - Image */}
         <div className="relative hidden lg:block lg:w-1/2">
