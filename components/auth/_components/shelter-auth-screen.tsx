@@ -4,9 +4,11 @@ import { useState } from "react"
 import Image from "next/image"
 import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Wallet, Building2, MapPin, Phone } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import useShelterRegisterForm from "@/features/auth/hooks/useShelterRegisterForm"
+import useLoginForm from "@/features/auth/hooks/useLoginForm"
 import { Controller } from "react-hook-form"
 import PhoneInput from "react-phone-number-input"
 import 'react-phone-number-input/style.css';
@@ -15,48 +17,43 @@ import { VerificationCodeModal } from "@/components/auth/_modals/verification-co
 type AuthMode = "login" | "register"
 
 interface ShelterAuthScreenProps {
-  onBack: () => void
-  onAuthenticated: () => void
+  onBack?: () => void
+  onAuthenticated?: () => void
+  initialMode?: AuthMode
 }
 
-const TEST_CREDENTIALS = { email: "refugio@test.com", password: "refugio123" }
-
-export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreenProps) {
-  const [mode, setMode] = useState<AuthMode>("login")
+export function ShelterAuthScreen({ onBack, onAuthenticated, initialMode = "login" }: ShelterAuthScreenProps) {
+  const router = useRouter()
+  const [mode, setMode] = useState<AuthMode>(initialMode)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [showVerificationCodeModal, setShowVerificationCodeModal] = useState(false)
   const [verificationEmail, setVerificationEmail] = useState("")
-  
-  // Login state
-  const [loginEmail, setLoginEmail] = useState("")
-  const [loginPassword, setLoginPassword] = useState("")
-  const [loginError, setLoginError] = useState("")
 
   // Register hook
   const {
     passwordValue,
     passwordStrength,
     handleRegisterForSubmit,
-    register,
+    register: registerShelter,
     control,
-    errors,
+    errors: registerErrors,
     handlePasswordChange
   } = useShelterRegisterForm({
     setShowVerificationCodeModal,
     setEmail: setVerificationEmail
   })
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoginError("")
-
-    if (loginEmail === TEST_CREDENTIALS.email && loginPassword === TEST_CREDENTIALS.password) {
-      onAuthenticated()
-    } else {
-      setLoginError(`Credenciales incorrectas. Usa: ${TEST_CREDENTIALS.email} / ${TEST_CREDENTIALS.password}`)
-    }
-  }
+  // Login hook
+  const {
+    register: registerLogin,
+    errors: loginErrors,
+    loginError,
+    loadingLogin,
+    handleLoginForSubmit,
+  } = useLoginForm({
+    redirectTo: "/dashboard/shelter",
+  })
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -65,7 +62,7 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
         <div className="flex w-full flex-col justify-center px-8 py-10 sm:px-12 lg:w-1/2">
           {/* Back Button */}
           <button
-            onClick={onBack}
+            onClick={() => router.push("/auth")}
             className="mb-6 flex w-fit items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -93,7 +90,7 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
           </div>
 
           {/* Form */}
-          <form onSubmit={mode === "login" ? handleLoginSubmit : handleRegisterForSubmit} className="flex flex-col gap-5">
+          <form onSubmit={mode === "login" ? handleLoginForSubmit : handleRegisterForSubmit} className="flex flex-col gap-5">
             {/* Error Message - Login */}
             {mode === "login" && loginError && (
               <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
@@ -101,15 +98,7 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
               </div>
             )}
 
-            {/* Test Credentials Hint */}
-            {mode === "login" && (
-              <div className="rounded-lg border border-border bg-muted/50 p-3 text-xs text-muted-foreground">
-                <strong>Credenciales de prueba:</strong><br />
-                Email: <code className="rounded bg-muted px-1">{TEST_CREDENTIALS.email}</code><br />
-                Password: <code className="rounded bg-muted px-1">{TEST_CREDENTIALS.password}</code>
-              </div>
-            )}
-
+            
             {/* Nombre del Refugio - solo registro */}
             {mode === "register" && (
               <div className="flex flex-col gap-2">
@@ -123,11 +112,11 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
                     type="text"
                     placeholder="Nombre del refugio"
                     className="pl-10"
-                    {...register("name")}
+                    {...registerShelter("name")}
                   />
                 </div>
-                {errors.name && (
-                  <span className="text-xs text-destructive">{errors.name.message}</span>
+                {registerErrors.name && (
+                  <span className="text-xs text-destructive">{registerErrors.name.message}</span>
                 )}
               </div>
             )}
@@ -145,11 +134,11 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
                     type="text"
                     placeholder="Ciudad, Pais"
                     className="pl-10"
-                    {...register("address")}
+                    {...registerShelter("address")}
                   />
                 </div>
-                {errors.address && (
-                  <span className="text-xs text-destructive">{errors.address.message}</span>
+                {registerErrors.address && (
+                  <span className="text-xs text-destructive">{registerErrors.address.message}</span>
                 )}
               </div>
             )}
@@ -167,8 +156,7 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
                     type="email"
                     placeholder="correo@ejemplo.com"
                     className="pl-10"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
+                    {...registerLogin("email")}
                   />
                 ) : (
                   <Input
@@ -176,12 +164,15 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
                     type="email"
                     placeholder="correo@ejemplo.com"
                     className="pl-10"
-                    {...register("email")}
+                    {...registerShelter("email")}
                   />
                 )}
               </div>
-              {mode === "register" && errors.email && (
-                <span className="text-xs text-destructive">{errors.email.message}</span>
+              {mode === "login" && loginErrors.email && (
+                <span className="text-xs text-destructive">{loginErrors.email.message}</span>
+              )}
+              {mode === "register" && registerErrors.email && (
+                <span className="text-xs text-destructive">{registerErrors.email.message}</span>
               )}
             </div>
 
@@ -198,8 +189,7 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
                     type={showPassword ? "text" : "password"}
                     placeholder="Tu contrasena segura"
                     className="pr-10 pl-10"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
+                    {...registerLogin("password")}
                   />
                 ) : (
                   <Input
@@ -207,7 +197,7 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
                     type={showPassword ? "text" : "password"}
                     placeholder="Tu contrasena segura"
                     className="pr-10 pl-10"
-                    {...register("password", {
+                    {...registerShelter("password", {
                       onChange: handlePasswordChange
                     })}
                   />
@@ -220,8 +210,8 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {mode === "register" && errors.password && (
-                <span className="text-xs text-destructive">{errors.password.message}</span>
+              {mode === "register" && registerErrors.password && (
+                <span className="text-xs text-destructive">{registerErrors.password.message}</span>
               )}
               {mode === "register" && passwordStrength.label && (
                 <div className="flex items-center gap-2">
@@ -253,7 +243,7 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Repite tu contrasena"
                     className="pr-10 pl-10"
-                    {...register("confirmPassword")}
+                    {...registerShelter("confirmPassword")}
                   />
                   <button
                     type="button"
@@ -263,8 +253,8 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {errors.confirmPassword && (
-                  <span className="text-xs text-destructive">{errors.confirmPassword.message}</span>
+                {registerErrors.confirmPassword && (
+                  <span className="text-xs text-destructive">{registerErrors.confirmPassword.message}</span>
                 )}
               </div>
             )}
@@ -288,8 +278,8 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
                     />
                   )}
                 />
-                {errors.phone_number && (
-                  <span className="text-xs text-destructive">{errors.phone_number.message}</span>
+                {registerErrors.phone_number && (
+                  <span className="text-xs text-destructive">{registerErrors.phone_number.message}</span>
                 )}
               </div>
             )}
@@ -309,9 +299,10 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
             {/* Submit */}
             <Button
               type="submit"
+              disabled={mode === "login" && loadingLogin}
               className="mt-1 w-full py-5 text-base font-semibold bg-teal text-teal-foreground hover:bg-teal/90"
             >
-              {mode === "login" ? "Iniciar Sesion" : "Crear Cuenta"}
+              {mode === "login" ? (loadingLogin ? "Iniciando..." : "Iniciar Sesion") : "Crear Cuenta"}
             </Button>
 
             {/* Wallet Connect Divider */}
@@ -337,7 +328,11 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {mode === "login" ? "No tienes una cuenta?" : "Ya tienes una cuenta?"}{" "}
             <button
-              onClick={() => setMode(mode === "login" ? "register" : "login")}
+              onClick={() => {    
+                const newMode = mode === "login" ? "register" : "login"
+                setMode(newMode)
+                router.push(`/auth/${newMode}/shelter`)
+              }}
               className="font-semibold text-teal transition-colors hover:text-teal/80"
             >
               {mode === "login" ? "Registrate aqui" : "Inicia sesion"}
@@ -349,9 +344,10 @@ export function ShelterAuthScreen({ onBack, onAuthenticated }: ShelterAuthScreen
         <VerificationCodeModal
           isOpen={showVerificationCodeModal}
           onClose={() => setShowVerificationCodeModal(false)}
-          onVerify={onAuthenticated}
           email={verificationEmail}
           accentColor="teal"
+          typeOfProcessing="register"
+          redirectTo="/dashboard/shelter"
         />
 
         {/* Right Side - Image */}

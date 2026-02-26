@@ -136,4 +136,18 @@ export const RegisterDonorDetailSchema = z.object({
     }
 )
 
+export const VerificationCodeSchema = z.object({
+    frist_digit: z.string().length(1, "El código debe tener 6 dígitos"),
+    second_digit: z.string().length(1, "El código debe tener 6 dígitos"),
+    third_digit: z.string().length(1, "El código debe tener 6 dígitos"),
+    fourth_digit: z.string().length(1, "El código debe tener 6 dígitos"),
+    fifth_digit: z.string().length(1, "El código debe tener 6 dígitos"),
+    sixth_digit: z.string().length(1, "El código debe tener 6 dígitos"),
+}).strict();
+
+
+export const VerificationCodeToSendSchema = z.object({
+    email: z.string().email("Ingresa un email valido"),
+    code: z.string().length(6, "El código debe tener 6 dígitos"),
+})
 

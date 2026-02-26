@@ -1,39 +1,53 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { ShieldCheck, X } from "lucide-react"
+import { ShieldCheck, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useVerificationCode } from "@/features/auth/hooks/useVerificationCode"
 
 interface VerificationCodeModalProps {
   isOpen: boolean
   onClose: () => void
-  onVerify: () => void
   email: string
   accentColor?: "primary" | "teal"
+  typeOfProcessing?: "login" | "register" | "reset"
+  redirectTo?: string
 }
 
 export function VerificationCodeModal({
   isOpen,
   onClose,
-  onVerify,
   email,
-  accentColor = "primary"
+  accentColor = "primary",
+  typeOfProcessing = "register",
+  redirectTo = "/dashboard/donor"
 }: VerificationCodeModalProps) {
-  const [verificationCode, setVerificationCode] = useState(["", "", "", "", "", ""])
+  const [verificationCodeState, setVerificationCodeState] = useState(["", "", "", "", "", ""])
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  const {
+    errorMessage,
+    isLoadingVerificationCode,
+    verifyCode,
+  } = useVerificationCode({
+    email,
+    setShowVerificationCodeModal: (show) => { if (!show) onClose() },
+    typeOfProcessing,
+    redirectTo,
+  })
 
   const handleCodeChange = (index: number, value: string) => {
     if (!/^\d*$/.test(value)) return
-    const newCode = [...verificationCode]
+    const newCode = [...verificationCodeState]
     newCode[index] = value.slice(-1)
-    setVerificationCode(newCode)
+    setVerificationCodeState(newCode)
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus()
     }
   }
 
   const handleCodeKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace" && !verificationCode[index] && index > 0) {
+    if (e.key === "Backspace" && !verificationCodeState[index] && index > 0) {
       inputRefs.current[index - 1]?.focus()
     }
   }
@@ -41,21 +55,28 @@ export function VerificationCodeModal({
   const handleCodePaste = (e: React.ClipboardEvent) => {
     e.preventDefault()
     const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6)
-    const newCode = [...verificationCode]
+    const newCode = [...verificationCodeState]
     pasted.split("").forEach((char, i) => { newCode[i] = char })
-    setVerificationCode(newCode)
+    setVerificationCodeState(newCode)
     const nextEmpty = newCode.findIndex((v) => !v)
     inputRefs.current[nextEmpty === -1 ? 5 : nextEmpty]?.focus()
   }
 
   const handleResendCode = () => {
-    setVerificationCode(["", "", "", "", "", ""])
+    setVerificationCodeState(["", "", "", "", "", ""])
     inputRefs.current[0]?.focus()
   }
 
   const handleClose = () => {
-    setVerificationCode(["", "", "", "", "", ""])
+    setVerificationCodeState(["", "", "", "", "", ""])
     onClose()
+  }
+
+  const handleVerify = () => {
+    const code = verificationCodeState.join("")
+    if (code.length === 6) {
+      verifyCode(code)
+    }
   }
 
   if (!isOpen) return null
@@ -88,7 +109,7 @@ export function VerificationCodeModal({
           </div>
 
           <div className="flex gap-2" onPaste={handleCodePaste}>
-            {verificationCode.map((digit, i) => (
+            {verificationCodeState.map((digit, i) => (
               <input
                 key={i}
                 ref={(el) => { inputRefs.current[i] = el }}
@@ -113,11 +134,19 @@ export function VerificationCodeModal({
                 ? "bg-primary text-primary-foreground hover:bg-primary/90"
                 : "bg-teal text-teal-foreground hover:bg-teal/90"
             }`}
-            onClick={onVerify}
-            disabled={verificationCode.some((d) => !d)}
+            onClick={handleVerify}
+            disabled={verificationCodeState.some((d) => !d) || isLoadingVerificationCode}
           >
-            Verificar cuenta
+            {isLoadingVerificationCode ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verificando...</>
+            ) : (
+              "Verificar cuenta"
+            )}
           </Button>
+
+          {errorMessage && (
+            <p className="text-xs text-destructive text-center">{errorMessage}</p>
+          )}
 
           <p className="text-xs text-muted-foreground">
             No recibiste el correo?{" "}

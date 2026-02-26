@@ -2,9 +2,11 @@ import { create } from "zustand";
 import { set } from "date-fns";
 
 export type UserInfo = {
+    name: string;
     user_id: string;
     email: string;
-    esta_activo: boolean;
+    rol: string;
+    user_is_active: boolean;
 }
 
 type UserStore = {

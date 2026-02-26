@@ -3,11 +3,13 @@
 import { useState } from "react"
 import { Controller } from "react-hook-form"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { ArrowLeft, Mail, Lock, User, Eye, EyeOff, Wallet, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import useDonorRegisterForm from "@/features/auth/hooks/useDonorRegisterForm"
+import useLoginForm from "@/features/auth/hooks/useLoginForm"
 import PhoneInput from "react-phone-number-input"
 import 'react-phone-number-input/style.css';
 import { VerificationCodeModal } from "@/components/auth/_modals/verification-code-modal"
@@ -15,26 +17,23 @@ import { VerificationCodeModal } from "@/components/auth/_modals/verification-co
 type AuthMode = "login" | "register"
 
 interface DonorAuthScreenProps {
-  onBack: () => void
-  onAuthenticated: () => void
+  onBack?: () => void
+  onAuthenticated?: () => void
+  initialMode?: AuthMode
 }
 
-const TEST_CREDENTIALS = { email: "donante@test.com", password: "donante123" }
-
-export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProps) {
-  const [mode, setMode] = useState<AuthMode>("login")
+export function DonorAuthScreen({ onBack, onAuthenticated, initialMode = "login" }: DonorAuthScreenProps) {
+  const router = useRouter()
+  const [mode, setMode] = useState<AuthMode>(initialMode)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const [loginEmail, setLoginEmail] = useState("")
-  const [loginPassword, setLoginPassword] = useState("")
-  const [loginError, setLoginError] = useState("")
   const [showVerificationCodeModal, setShowVerificationCodeModal] = useState(false)
   const [verificationEmail, setVerificationEmail] = useState("")
 
   const {
-    register,
+    register: registerDonor,
     control,
-    errors,
+    errors: registerErrors,
     handleRegisterForSubmit,
     passwordValue,
     passwordStrength,
@@ -44,16 +43,17 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
     setEmail: setVerificationEmail,
   })
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoginError("")
+  const {
+    register: registerLogin,
+    errors: loginErrors,
+    loginError,
+    loadingLogin,
+    handleLoginForSubmit,
+  } = useLoginForm({
+    redirectTo: "/dashboard/donor",
+  })
 
-    if (loginEmail === TEST_CREDENTIALS.email && loginPassword === TEST_CREDENTIALS.password) {
-      onAuthenticated()
-    } else {
-      setLoginError(`Credenciales incorrectas. Usa: ${TEST_CREDENTIALS.email} / ${TEST_CREDENTIALS.password}`)
-    }
-  }
+  
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
@@ -62,7 +62,7 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
         <div className="flex w-full flex-col justify-center px-8 py-10 sm:px-12 lg:w-1/2">
           {/* Back Button */}
           <button
-            onClick={onBack}
+            onClick={() => router.push("/auth")}
             className="mb-6 flex w-fit items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -91,18 +91,12 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
 
           {/* Form - Login */}
           {mode === "login" && (
-            <form onSubmit={handleLoginSubmit} className="flex flex-col gap-5">
+            <form onSubmit={handleLoginForSubmit} className="flex flex-col gap-5">
               {loginError && (
                 <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
                   {loginError}
                 </div>
               )}
-
-              <div className="rounded-lg border border-border bg-muted/50 p-3 text-xs text-muted-foreground">
-                <strong>Credenciales de prueba:</strong><br />
-                Email: <code className="rounded bg-muted px-1">{TEST_CREDENTIALS.email}</code><br />
-                Password: <code className="rounded bg-muted px-1">{TEST_CREDENTIALS.password}</code>
-              </div>
 
               <div className="flex flex-col gap-2">
                 <Label htmlFor="login-email" className="text-sm font-medium text-foreground">
@@ -115,10 +109,12 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
                     type="email"
                     placeholder="correo@ejemplo.com"
                     className="pl-10"
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
+                    {...registerLogin("email")}
                   />
                 </div>
+                {loginErrors.email && (
+                  <p className="text-xs text-destructive">{loginErrors.email.message}</p>
+                )}
               </div>
 
               <div className="flex flex-col gap-2">
@@ -132,8 +128,7 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
                     type={showPassword ? "text" : "password"}
                     placeholder="Tu contrasena segura"
                     className="pr-10 pl-10"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
+                    {...registerLogin("password")}
                   />
                   <button
                     type="button"
@@ -156,9 +151,10 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
 
               <Button
                 type="submit"
+                disabled={loadingLogin}
                 className="mt-1 w-full py-5 text-base font-semibold bg-primary text-primary-foreground hover:bg-primary/90"
               >
-                Iniciar Sesion
+                {loadingLogin ? "Iniciando..." : "Iniciar Sesion"}
               </Button>
 
               <div className="flex items-center gap-3">
@@ -194,11 +190,11 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
                     type="text"
                     placeholder="Tu nombre"
                     className="pl-10"
-                    {...register("name")}
+                    {...registerDonor("name")}
                   />
                 </div>
-                {errors.name && (
-                  <p className="text-xs text-destructive">{errors.name.message}</p>
+                {registerErrors.name && (
+                  <p className="text-xs text-destructive">{registerErrors.name.message}</p>
                 )}
               </div>
 
@@ -214,11 +210,11 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
                     type="text"
                     placeholder="Tu apellido paterno"
                     className="pl-10"
-                    {...register("paternal_last_name")}
+                    {...registerDonor("paternal_last_name")}
                   />
                 </div>
-                {errors.paternal_last_name && (
-                  <p className="text-xs text-destructive">{errors.paternal_last_name.message}</p>
+                {registerErrors.paternal_last_name && (
+                  <p className="text-xs text-destructive">{registerErrors.paternal_last_name.message}</p>
                 )}
               </div>
 
@@ -234,11 +230,11 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
                     type="text"
                     placeholder="Tu apellido materno"
                     className="pl-10"
-                    {...register("maternal_last_name")}
+                    {...registerDonor("maternal_last_name")}
                   />
                 </div>
-                {errors.maternal_last_name && (
-                  <p className="text-xs text-destructive">{errors.maternal_last_name.message}</p>
+                {registerErrors.maternal_last_name && (
+                  <p className="text-xs text-destructive">{registerErrors.maternal_last_name.message}</p>
                 )}
               </div>
 
@@ -254,11 +250,11 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
                     type="email"
                     placeholder="correo@ejemplo.com"
                     className="pl-10"
-                    {...register("email")}
+                    {...registerDonor("email")}
                   />
                 </div>
-                {errors.email && (
-                  <p className="text-xs text-destructive">{errors.email.message}</p>
+                {registerErrors.email && (
+                  <p className="text-xs text-destructive">{registerErrors.email.message}</p>
                 )}
               </div>
 
@@ -280,8 +276,8 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
                     />
                   )}
                 />
-                {errors.phone_number && (
-                  <p className="text-xs text-destructive">{errors.phone_number.message}</p>
+                {registerErrors.phone_number && (
+                  <p className="text-xs text-destructive">{registerErrors.phone_number.message}</p>
                 )}
               </div>
 
@@ -297,7 +293,7 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
                     type={showPassword ? "text" : "password"}
                     placeholder="Tu contrasena segura"
                     className="pr-10 pl-10"
-                    {...register("password")}
+                    {...registerDonor("password")}
                     onChange={handlePasswordChange}
                     value={passwordValue}
                   />
@@ -309,8 +305,8 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {errors.password && (
-                  <p className="text-xs text-destructive">{errors.password.message}</p>
+                {registerErrors.password && (
+                  <p className="text-xs text-destructive">{registerErrors.password.message}</p>
                 )}
                 {passwordStrength.label && (
                   <div className="flex items-center gap-2">
@@ -341,7 +337,7 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
                     type={showConfirmPassword ? "text" : "password"}
                     placeholder="Repite tu contrasena"
                     className="pr-10 pl-10"
-                    {...register("confirmPassword")}
+                    {...registerDonor("confirmPassword")}
                   />
                   <button
                     type="button"
@@ -351,8 +347,8 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {errors.confirmPassword && (
-                  <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
+                {registerErrors.confirmPassword && (
+                  <p className="text-xs text-destructive">{registerErrors.confirmPassword.message}</p>
                 )}
               </div>
 
@@ -385,7 +381,11 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
           <p className="mt-6 text-center text-sm text-muted-foreground">
             {mode === "login" ? "No tienes una cuenta?" : "Ya tienes una cuenta?"}{" "}
             <button
-              onClick={() => setMode(mode === "login" ? "register" : "login")}
+              onClick={() => {
+                const newMode = mode === "login" ? "register" : "login"
+                setMode(newMode)
+                router.push(`/auth/${newMode}/donor`)
+              }}
               className="font-semibold text-primary transition-colors hover:text-primary/80"
             >
               {mode === "login" ? "Registrate aqui" : "Inicia sesion"}
@@ -397,9 +397,10 @@ export function DonorAuthScreen({ onBack, onAuthenticated }: DonorAuthScreenProp
         <VerificationCodeModal
           isOpen={showVerificationCodeModal}
           onClose={() => setShowVerificationCodeModal(false)}
-          onVerify={onAuthenticated}
           email={verificationEmail}
           accentColor="primary"
+          typeOfProcessing="register"
+          redirectTo="/dashboard/donor"
         />
 
         {/* Right Side - Image */}

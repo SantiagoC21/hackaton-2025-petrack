@@ -1,12 +1,14 @@
 "use client"
 
 import { Heart, Building2, ShieldCheck, ArrowRight } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 interface RoleSelectorProps {
-  onSelect: (role: "donor" | "shelter") => void
+  onSelect?: (role: "donor" | "shelter") => void
 }
 
 export function RoleSelector({ onSelect }: RoleSelectorProps) {
+  const router = useRouter()
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
       {/* Logo and Header */}
@@ -26,7 +28,10 @@ export function RoleSelector({ onSelect }: RoleSelectorProps) {
       <div className="flex w-full max-w-2xl flex-col gap-5 sm:flex-row">
         {/* Donor Card */}
         <button
-          onClick={() => onSelect("donor")}
+          onClick={() => {
+            onSelect?.("donor")
+            router.push("/auth/login/donor")
+          }}
           className="group relative flex flex-1 cursor-pointer flex-col items-center gap-5 rounded-2xl border-2 border-border bg-card p-8 text-card-foreground shadow-sm transition-all hover:border-primary hover:shadow-md"
         >
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 transition-colors group-hover:bg-primary/20">
@@ -60,7 +65,10 @@ export function RoleSelector({ onSelect }: RoleSelectorProps) {
 
         {/* Shelter Card */}
         <button
-          onClick={() => onSelect("shelter")}
+          onClick={() => {
+            onSelect?.("shelter")
+            router.push("/auth/login/shelter")
+          }}
           className="group relative flex flex-1 cursor-pointer flex-col items-center gap-5 rounded-2xl border-2 border-border bg-card p-8 text-card-foreground shadow-sm transition-all hover:border-teal hover:shadow-md"
         >
           <div className="flex h-20 w-20 items-center justify-center rounded-full bg-teal/10 transition-colors group-hover:bg-teal/20">
